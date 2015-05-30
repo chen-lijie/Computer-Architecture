@@ -1,16 +1,26 @@
 /* Instruction Set definition for Y86 Architecture */
 /* Revisions:
-   2009-03-11:
-       Changed RNONE to be 0xF
-       Changed J_XX and jump_t to C_XX and cond_t; take_branch to cond_holds
-       Expanded RRMOVL to include conditional moves
-*/
+ 2009-03-11:
+ Changed RNONE to be 0xF
+ Changed J_XX and jump_t to C_XX and cond_t; take_branch to cond_holds
+ Expanded RRMOVL to include conditional moves
+ */
 
 /**************** Registers *************************/
 
 /* REG_NONE is a special one to indicate no register */
-typedef enum { REG_EAX, REG_ECX, REG_EDX, REG_EBX,
-	       REG_ESP, REG_EBP, REG_ESI, REG_EDI, REG_NONE=0xF, REG_ERR } reg_id_t;
+typedef enum {
+	REG_EAX,
+	REG_ECX,
+	REG_EDX,
+	REG_EBX,
+	REG_ESP,
+	REG_EBP,
+	REG_ESI,
+	REG_EDI,
+	REG_NONE = 0xF,
+	REG_ERR
+} reg_id_t;
 
 /* Find register ID given its name */
 reg_id_t find_register(char *name);
@@ -20,24 +30,46 @@ char *reg_name(reg_id_t id);
 /**************** Instruction Encoding **************/
 
 /* Different argument types */
-typedef enum { R_ARG, M_ARG, I_ARG, NO_ARG } arg_t;
+typedef enum {
+	R_ARG, M_ARG, I_ARG, NO_ARG
+} arg_t;
 
 /* Different instruction types */
-typedef enum { I_HALT, I_NOP, I_RRMOVL, I_IRMOVL, I_RMMOVL, I_MRMOVL,
-	       I_ALU, I_JMP, I_CALL, I_RET, I_PUSHL, I_POPL,
-	       I_IADDL, I_LEAVE, I_POP2 } itype_t;
+typedef enum {
+	I_HALT,
+	I_NOP,
+	I_RRMOVL,
+	I_IRMOVL,
+	I_RMMOVL,
+	I_MRMOVL,
+	I_ALU,
+	I_JMP,
+	I_CALL,
+	I_RET,
+	I_PUSHL,
+	I_POPL,
+	I_IADDL,
+	I_LEAVE,
+	I_POP2
+} itype_t;
 
 /* Different ALU operations */
-typedef enum { A_ADD, A_SUB, A_AND, A_XOR, A_NONE } alu_t;
+typedef enum {
+	A_ADD, A_SUB, A_AND, A_XOR, A_NONE
+} alu_t;
 
 /* Default function code */
-typedef enum { F_NONE } fun_t;
+typedef enum {
+	F_NONE
+} fun_t;
 
 /* Return name of operation given its ID */
 char op_name(alu_t op);
 
 /* Different Jump conditions */
-typedef enum { C_YES, C_LE, C_L, C_E, C_NE, C_GE, C_G } cond_t;
+typedef enum {
+	C_YES, C_LE, C_L, C_E, C_NE, C_GE, C_G
+} cond_t;
 
 /* Pack itype and function into single byte */
 #define HPACK(hi,lo) ((((hi)&0xF)<<4)|((lo)&0xF))
@@ -56,19 +88,21 @@ typedef enum { C_YES, C_LE, C_L, C_E, C_NE, C_GE, C_G } cond_t;
 char *iname(int instr);
 
 /**************** Truth Values **************/
-typedef enum { FALSE, TRUE } bool_t;
+typedef enum {
+	FALSE, TRUE
+} bool_t;
 
 /* Table used to encode information about instructions */
 typedef struct {
-  char *name;
-  unsigned char code; /* Byte code for instruction+op */
-  int bytes;
-  arg_t arg1;
-  int arg1pos;
-  int arg1hi;  /* 0/1 for register argument, # bytes for allocation */
-  arg_t arg2;
-  int arg2pos;
-  int arg2hi;  /* 0/1 */
+	char *name;
+	unsigned char code; /* Byte code for instruction+op */
+	int bytes;
+	arg_t arg1;
+	int arg1pos;
+	int arg1hi; /* 0/1 for register argument, # bytes for allocation */
+	arg_t arg2;
+	int arg2pos;
+	int arg2hi; /* 0/1 */
 } instr_t, *instr_ptr;
 
 instr_ptr find_instr(char *name);
@@ -81,14 +115,18 @@ typedef unsigned char byte_t;
 typedef int word_t;
 
 /* Represent a memory as an array of bytes */
+
 typedef struct {
-  int len;
-  word_t maxaddr;
-  byte_t *contents;
+	int len;
+	word_t maxaddr;
+	byte_t *contents;
+	cache_t cache;
+	byte_t *shared;
+	bus_t *bus; //bus will never be cached
 } mem_rec, *mem_t;
 
 /* Create a memory with len bytes */
-mem_t init_mem(int len);
+mem_t init_mem(int len, bool_t is_reg);
 void free_mem(mem_t m);
 
 /* Set contents of memory to 0 */
@@ -98,6 +136,17 @@ void clear_mem(mem_t m);
 mem_t copy_mem(mem_t oldm);
 /* Print the differences between two memories */
 bool_t diff_mem(mem_t oldm, mem_t newm, FILE *outfile);
+
+/*
+ * cache methods
+ */
+
+cache_blk_t find_cache_blk(cache_t cache, word_t addr);
+//find the corresponding cache block
+void load_cache(mem_t mem, word_t addr);
+//load the block from memory to cache
+void commit_cache(mem_t mem, cache_blk_t blk, word_t addr);
+//commit the cache into memory at addr
 
 /* How big should the memory be? */
 #ifdef BIG_MEM
@@ -136,12 +185,9 @@ mem_t copy_reg(mem_t oldr);
 /* Print the differences between two register files */
 bool_t diff_reg(mem_t oldr, mem_t newr, FILE *outfile);
 
-
 word_t get_reg_val(mem_t r, reg_id_t id);
 void set_reg_val(mem_t r, reg_id_t id, word_t val);
 void dump_reg(FILE *outfile, mem_t r);
-
-
 
 /* ****************  ALU Function **********************/
 
@@ -166,8 +212,9 @@ char *cc_name(cc_t c);
 
 /* **************** Status types *******************/
 
-typedef enum 
- {STAT_BUB, STAT_AOK, STAT_HLT, STAT_ADR, STAT_INS, STAT_PIP } stat_t;
+typedef enum {
+	STAT_BUB, STAT_AOK, STAT_HLT, STAT_ADR, STAT_INS, STAT_PIP
+} stat_t;
 
 /* Describe Status */
 char *stat_name(stat_t e);
@@ -175,10 +222,10 @@ char *stat_name(stat_t e);
 /* **************** ISA level implementation *********/
 
 typedef struct {
-  word_t pc;
-  mem_t r;
-  mem_t m;
-  cc_t cc;
+	word_t pc;
+	mem_t r;
+	mem_t m;
+	cc_t cc;
 } state_rec, *state_ptr;
 
 state_ptr new_state(int memlen);
