@@ -7,8 +7,16 @@
  */
 
 /**************** Registers *************************/
-
 /* REG_NONE is a special one to indicate no register */
+
+#ifndef H_ISA
+#define H_ISA
+
+#include "header.h"
+#include "cache.h"
+#include "shared_memory.h"
+#include "bus.h"
+
 typedef enum {
 	REG_EAX,
 	REG_ECX,
@@ -87,11 +95,6 @@ typedef enum {
 /* Return name of instruction given it's byte encoding */
 char *iname(int instr);
 
-/**************** Truth Values **************/
-typedef enum {
-	FALSE, TRUE
-} bool_t;
-
 /* Table used to encode information about instructions */
 typedef struct {
 	char *name;
@@ -110,10 +113,6 @@ instr_ptr find_instr(char *name);
 /* Return invalid instruction for error handling purposes */
 instr_ptr bad_instr();
 
-/***********  Implementation of Memory *****************/
-typedef unsigned char byte_t;
-typedef int word_t;
-
 /* Represent a memory as an array of bytes */
 
 typedef struct {
@@ -122,7 +121,7 @@ typedef struct {
 	byte_t *contents;
 	cache_t cache;
 	byte_t *shared;
-	bus_t *bus; //bus will never be cached
+	int* bus; //bus will never be cached
 } mem_rec, *mem_t;
 
 /* Create a memory with len bytes */
@@ -143,10 +142,12 @@ bool_t diff_mem(mem_t oldm, mem_t newm, FILE *outfile);
 
 cache_blk_t find_cache_blk(cache_t cache, word_t addr);
 //find the corresponding cache block
-void load_cache(mem_t mem, word_t addr);
+cache_blk_t load_cache(mem_t mem, word_t addr);
 //load the block from memory to cache
 void commit_cache(mem_t mem, cache_blk_t blk, word_t addr);
 //commit the cache into memory at addr
+void broadcast(mem_t mem, int type, int addr);
+void response(mem_t mem, bool_t need_lock);
 
 /* How big should the memory be? */
 #ifdef BIG_MEM
@@ -245,5 +246,7 @@ stat_t step_state(state_ptr s, FILE *error_file);
 #ifdef HAS_GUI
 void report_line(int line_no, int addr, char *hexcode, char *line);
 void signal_register_update(reg_id_t r, int val);
+
+#endif
 
 #endif

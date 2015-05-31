@@ -1,9 +1,13 @@
 /*
- * catch.h
+ * cache.h
  *
  *  Created on: May 30, 2015
  *      Author: wjmzbmr
  */
+
+#ifndef H_CACHE
+#define H_CACHE
+
 #include "header.h"
 
 /*
@@ -41,3 +45,4 @@ typedef struct {
 } cache_rec, *cache_t;
 
 cache_t new_cache();
+#endif

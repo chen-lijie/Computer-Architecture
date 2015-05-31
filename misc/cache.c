@@ -6,7 +6,7 @@
  */
 
 #include "header.h"
-#include "catch.h"
+#include "cache.h"
 
 cache_t new_cache() {
 	return (cache_t) calloc(1, sizeof(cache_rec));

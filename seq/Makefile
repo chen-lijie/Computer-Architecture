@@ -32,7 +32,7 @@ CFLAGS=-Wall -O2
 MISCDIR=../misc
 HCL2C=$(MISCDIR)/hcl2c
 INC=$(TKINC) -I$(MISCDIR) $(GUIMODE)
-LIBS=$(TKLIBS) -lm
+LIBS=$(TKLIBS) -lm -lpthread
 YAS=../misc/yas
 
 all: ssim
@@ -42,14 +42,14 @@ ssim: seq-$(VERSION).hcl ssim.c  sim.h $(MISCDIR)/isa.c $(MISCDIR)/isa.h
 	# Building the seq-$(VERSION).hcl version of SEQ
 	$(HCL2C) -n seq-$(VERSION).hcl <seq-$(VERSION).hcl >seq-$(VERSION).c
 	$(CC) $(CFLAGS) $(INC) -o ssim \
-		seq-$(VERSION).c ssim.c $(MISCDIR)/isa.c $(LIBS)
+		seq-$(VERSION).c ssim.c $(MISCDIR)/isa.c $(MISCDIR)/cache.c $(MISCDIR)/lock.c $(MISCDIR)/shared_memory.c $(MISCDIR)/bus.c $(LIBS)
 
 # This rule builds the SEQ+ simulator (ssim+)
 ssim+: seq+-std.hcl ssim.c sim.h $(MISCDIR)/isa.c $(MISCDIR)/isa.h 
 	# Building the seq+-std.hcl version of SEQ+
 	$(HCL2C) -n seq+-std.hcl <seq+-std.hcl >seq+-std.c
 	$(CC) $(CFLAGS) $(INC) -o ssim+ \
-		seq+-std.c ssim.c $(MISCDIR)/isa.c $(LIBS)
+		seq+-std.c ssim.c $(MISCDIR)/isa.c $(MISCDIR)/cache.c $(MISCDIR)/lock.c $(MISCDIR)/shared_memory.c $(MISCDIR)/bus.c $(LIBS)
 
 # These are implicit rules for assembling .yo files from .ys files.
 .SUFFIXES: .ys .yo

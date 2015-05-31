@@ -534,6 +534,9 @@ void sim_stall_stage(stage_id_t stage) {
 static int initialized = 0;
 
 void sim_init() {
+	bus_ptr = get_shared_memory_phy(BUS_PATH, BUS_SIZE);
+	shared_ptr = get_shared_memory_phy(SHARED_MEMORY_PATH, SHARED_MEMORY_SIZE);
+	set_bus_lock();
 	/* Create memory and register files */
 	initialized = 1;
 	mem = init_mem(MEM_SIZE, 0);
@@ -761,7 +764,11 @@ int sim_run_pipe(int max_instr, int max_cycle, byte_t *statusp, cc_t *ccp) {
 	int icount = 0;
 	int ccount = 0;
 	byte_t run_status = STAT_AOK;
+
+	enter_bus(mem);
+
 	while (icount < max_instr && ccount < max_cycle) {
+		response(mem, TRUE);
 		run_status = sim_step_pipe(max_instr - icount, ccount);
 		if (run_status != STAT_BUB)
 			icount++;
@@ -773,6 +780,8 @@ int sim_run_pipe(int max_instr, int max_cycle, byte_t *statusp, cc_t *ccp) {
 		*statusp = run_status;
 	if (ccp)
 		*ccp = cc;
+
+	leave_bus(mem);
 	return icount;
 }
 

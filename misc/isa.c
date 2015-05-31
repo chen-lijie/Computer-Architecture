@@ -3,9 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "isa.h"
-#include "header.h"
-#include "cache.h"
-#include "shared_memory.h"
 
 /* Are we running in GUI mode? */
 extern int gui_mode;
@@ -120,7 +117,7 @@ mem_t init_mem(int len, bool_t is_reg) {
 		result->bus = NULL;
 		result->cache = NULL;
 	} else {
-		assert(len == MEM_SIZE);
+		assert(len==0 || len== MEM_SIZE);
 		result->len = len;
 		result->contents = (byte_t *) calloc(OWN_MEMORY_SIZE, 1);
 		result->shared = get_shared_memory();
@@ -131,7 +128,10 @@ mem_t init_mem(int len, bool_t is_reg) {
 }
 
 void clear_mem(mem_t m) {
-	memset(m->contents, 0, m->len);
+	if (m->cache)
+		memset(m->contents, 0, OWN_MEMORY_SIZE);
+	else
+		memset(m->contents, 0, m->len);
 }
 
 void free_mem(mem_t m) {
@@ -140,17 +140,20 @@ void free_mem(mem_t m) {
 }
 
 mem_t copy_mem(mem_t oldm) {
-	mem_t newm = init_mem(oldm->len, oldm->shared == NULL);
-	memcpy(newm->contents, oldm->contents, oldm->len);
+	mem_t newm = init_mem(oldm->len, oldm->cache == NULL);
+	if (oldm->cache)
+		memcpy(newm->contents, oldm->contents, OWN_MEMORY_SIZE);
+	else
+		memcpy(newm->contents, oldm->contents, oldm->len);
 	return newm;
 }
 
 bool_t diff_mem(mem_t oldm, mem_t newm, FILE *outfile) {
 	word_t pos;
-	int len = oldm->len;
+	int len = newm->len;
 	bool_t diff = FALSE;
-	if (newm->len < len)
-		len = newm->len;
+	if (newm->cache)
+		len = OWN_MEMORY_SIZE;
 	for (pos = 0; (!diff || outfile) && pos < len; pos += 4) {
 		word_t ov = 0;
 		word_t nv = 0;
@@ -284,7 +287,8 @@ cache_blk_t find_cache_blk(cache_t cache, word_t addr) {
 	//find the corresponding cache block
 	int tag = GET_ADDR_TAG(addr);
 	int set = GET_ADDR_SET(addr);
-	for (int i = 0; i < NUM_WAYS; ++i) {
+	int i;
+	for (i = 0; i < NUM_WAYS; ++i) {
 		cache_blk_t blk = cache->blks[set] + i;
 		if (blk->tag == tag && blk->valid == TRUE)
 			return blk;
@@ -297,7 +301,7 @@ cache_blk_t load_cache(mem_t mem, word_t addr) {
 	cache_t cache = mem->cache;
 
 	//broadcast it so we can get the correct value
-	broadcast(mem->bus, 'R', addr);
+	broadcast(mem, 'R', addr);
 
 	//now, need to pick a block to replace
 	int set = GET_ADDR_SET(addr);
@@ -308,14 +312,18 @@ cache_blk_t load_cache(mem_t mem, word_t addr) {
 
 	//if there is a invalid block, pick it
 
-	for (int i = 0; i < NUM_WAYS; ++i) {
+	int i;
+	for (i = 0; i < NUM_WAYS; ++i) {
 		cache_blk_t blk = cache->blks[set] + i;
 		if (!blk->valid)
 			rep = blk;
 	}
 
 	//otherwise pick a random one
-	rep = cache->blks[set] + (rand() % NUM_WAYS);
+	if (rep == NULL) {
+		rep = cache->blks[set] + (rand() % NUM_WAYS);
+		commit_cache(mem, rep, (rep->tag) << (SET_LENGTH + BLOCK_LENGTH));
+	}
 	rep->tag = tag;
 	rep->valid = TRUE;
 	rep->dirty = FALSE;
@@ -344,51 +352,93 @@ void commit_cache(mem_t mem, cache_blk_t blk, word_t addr) {
 }
 
 void enter_bus(mem_t mem) {
-	bus_t bus = mem->bus;
+
+	int* bus = mem->bus;
 	acquire_lock(bus_lock);
-	my_id = bus->client_count++;
+
+	assert(bus[BUS_TYPE] == 0);
+	my_id = bus[BUS_CLIENT_COUNT]++;
+	assert(bus[BUS_CLIENT_COUNT] <= 2);
+
 	release_lock(bus_lock);
 }
 
 void leave_bus(mem_t mem) {
+	int* bus = mem->bus;
+	acquire_lock(bus_lock);
+	response(mem, FALSE);
+
+	//bye bye~
+	//commit everything and go away~
+	int i, j;
+	for (i = 0; i < (1 << SET_LENGTH); ++i) {
+		for (j = 0; j < NUM_WAYS; ++j) {
+			cache_blk_t blk = mem->cache->blks[i] + j;
+			if (blk->valid && blk->dirty)
+				commit_cache(mem, blk, blk->tag << (SET_LENGTH + BLOCK_LENGTH));
+		}
+	}
+
+	assert(bus[BUS_TYPE] == 0);
+	bus[BUS_EXITED] |= 1 << my_id;
+
+	release_lock(bus_lock);
 }
 
-void broadcast(bus_t bus, int type, int addr) {
+void broadcast(mem_t mem, int type, int addr) {
 //my own memory need not be broadcasted
 	if (addr < OWN_MEMORY_SIZE)
 		return;
-//acquire the lock
+	int*bus = mem->bus;
 	acquire_lock(bus_lock);
-	bus->id = my_id;
-	bus->type = type;
-	bus->addr = addr;
-	bus->finished[my_id] = TRUE;
+
+	if (bus[BUS_CLIENT_COUNT] == 1) {
+		//no need to broadcast
+		release_lock(bus_lock);
+		return;
+	}
+
+	//check whether there are message on the bus first.
+	response(mem, FALSE);
+
+	//There should be no message left here
+	assert(bus[BUS_TYPE] == 0);
+
+	bus[BUS_ID] = my_id;
+	bus[BUS_TYPE] = type;
+	bus[BUS_ADDR] = addr;
+
 	release_lock(bus_lock);
 //waiting on this broadcast to be finished
 	sem_wait(broadcast_finished);
 }
 
-void response(mem_t mem) {
-	acquire_lock(bus_lock);
-	bus_t bus = mem->bus;
-	if (bus->type == 0) {
-		release_lock(bus_lock);
+void response(mem_t mem, bool_t need_lock) {
+	if (need_lock)
+		acquire_lock(bus_lock);
+	int* bus = mem->bus;
+	if (bus[BUS_TYPE] == 0) {
+		if (need_lock)
+			release_lock(bus_lock);
 		return;
 	}
 
-	word_t id = bus->id;
-	word_t type = bus->type;
-	word_t addr = bus->addr;
+	word_t id = bus[BUS_ID];
+	word_t type = bus[BUS_TYPE];
+	word_t addr = bus[BUS_ADDR];
 
-	if (type == 0 || bus->finished[my_id]) {
-		release_lock(bus_lock);
+	if (type == 0 || my_id == id) {
+		if (need_lock)
+			release_lock(bus_lock);
 		return;
 	}
 
 	cache_blk_t blk = find_cache_blk(mem->cache, addr);
 	if (blk == NULL) {
-		bus->finished[my_id] = TRUE;
-		release_lock(bus_lock);
+		clear_bus(bus);
+		sem_post(broadcast_finished);
+		if (need_lock)
+			release_lock(bus_lock);
 		return;
 	}
 
@@ -402,14 +452,21 @@ void response(mem_t mem) {
 		blk->valid = FALSE;
 	}
 
-	bus->finished[my_id] = TRUE;
-	release_lock(bus_lock);
+	clear_bus(bus);
+	sem_post(broadcast_finished);
+	if (need_lock)
+		release_lock(bus_lock);
 	return;
 }
 
 bool_t get_byte_val(mem_t m, word_t pos, byte_t *dest) {
 	if (pos < 0 || pos >= m->len)
 		return FALSE;
+
+	if (!m->cache) {
+		*dest = m->contents[pos];
+		return TRUE;
+	}
 	cache_blk_t blk = find_cache_blk(m->cache, pos);
 	if (blk == NULL) {
 		blk = load_cache(m, pos);
@@ -439,12 +496,17 @@ bool_t get_word_val(mem_t m, word_t pos, word_t *dest) {
 bool_t set_byte_val(mem_t m, word_t pos, byte_t val) {
 	if (pos < 0 || pos >= m->len)
 		return FALSE;
+
+	if (!m->cache) {
+		m->contents[pos] = val;
+		return TRUE;
+	}
 	cache_blk_t blk = find_cache_blk(m->cache, pos);
 	if (blk == NULL) {
 		blk = load_cache(m, pos);
 	}
 
-	broadcast(m->bus, 'W', pos);
+	broadcast(m, 'W', pos);
 	blk->contents[GET_ADDR_BLOCK(pos)] = val;
 	blk->dirty = TRUE;
 	return TRUE;

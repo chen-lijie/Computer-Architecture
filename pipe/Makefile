@@ -23,7 +23,7 @@ VERSION=full
 # flags.
 
 CC=gcc
-CFLAGS=-Wall -O2
+CFLAGS=-Wall -O2 -g
 
 ##################################################
 # You shouldn't need to modify anything below here
@@ -32,7 +32,7 @@ CFLAGS=-Wall -O2
 MISCDIR=../misc
 HCL2C=$(MISCDIR)/hcl2c
 INC=$(TKINC) -I$(MISCDIR) $(GUIMODE)
-LIBS=$(TKLIBS) -lm
+LIBS=$(TKLIBS) -lm -lpthread
 YAS = ../misc/yas
 
 all: psim drivers
@@ -42,7 +42,7 @@ psim: psim.c sim.h pipe-$(VERSION).hcl $(MISCDIR)/isa.c $(MISCDIR)/isa.h
 	# Building the pipe-$(VERSION).hcl version of PIPE
 	$(HCL2C) -n pipe-$(VERSION).hcl < pipe-$(VERSION).hcl > pipe-$(VERSION).c
 	$(CC) $(CFLAGS) $(INC) -o psim psim.c pipe-$(VERSION).c \
-		$(MISCDIR)/isa.c $(LIBS)
+		$(MISCDIR)/isa.c $(MISCDIR)/cache.c $(MISCDIR)/lock.c $(MISCDIR)/shared_memory.c $(MISCDIR)/bus.c $(LIBS)
 
 # This rule builds driver programs for Part C of the Architecture Lab
 drivers: 
