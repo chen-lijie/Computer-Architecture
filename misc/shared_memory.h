@@ -6,7 +6,6 @@
  */
 #ifndef H_SHARED_MEMORY
 #define H_SHARED_MEMORY
-#include "bus.h"
 #include "cache.h"
 
 #define SHARED_MEMORY_PATH 19950801

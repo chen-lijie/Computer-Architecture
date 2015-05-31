@@ -1,0 +1,9 @@
+	      irmovl $256, %edx
+	      irmovl $32, %ebx
+	      nop
+	      nop
+	      nop
+	      addl %edx,%ebx
+	      nop
+	      nop
+	      halt

@@ -1,0 +1,4 @@
+Main:	
+	irmovl $4,%eax
+	rmmovl %eax,5000
+	halt

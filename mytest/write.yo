@@ -1,0 +1,4 @@
+  0x000:              | Main:	
+  0x000: 30f004000000 | 	irmovl $4,%eax
+  0x006: 400f88130000 | 	rmmovl %eax,5000
+  0x00c: 00           | 	halt

@@ -15,7 +15,8 @@
 #include "header.h"
 #include "cache.h"
 #include "shared_memory.h"
-#include "bus.h"
+
+int my_id;
 
 typedef enum {
 	REG_EAX,
@@ -147,7 +148,7 @@ cache_blk_t load_cache(mem_t mem, word_t addr);
 void commit_cache(mem_t mem, cache_blk_t blk, word_t addr);
 //commit the cache into memory at addr
 void broadcast(mem_t mem, int type, int addr);
-void response(mem_t mem, bool_t need_lock);
+void response(mem_t mem);
 
 /* How big should the memory be? */
 #ifdef BIG_MEM
@@ -172,6 +173,10 @@ bool_t set_byte_val(mem_t m, word_t pos, byte_t val);
 
 /* Set 4 bytes in memory */
 bool_t set_word_val(mem_t m, word_t pos, word_t val);
+
+bool_t get_and_set_word_val(mem_t m, word_t pos, word_t*dest, word_t val);
+
+bool_t get_and_set_byte_val(mem_t m, word_t pos, byte_t*dest, byte_t val);
 
 /* Print contents of memory */
 void dump_memory(FILE *outfile, mem_t m, word_t pos, int cnt);

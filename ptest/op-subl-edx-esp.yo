@@ -1,0 +1,9 @@
+  0x000: 30f200010000 | 	      irmovl $256, %edx
+  0x006: 30f420000000 | 	      irmovl $32, %esp
+  0x00c: 10           | 	      nop
+  0x00d: 10           | 	      nop
+  0x00e: 10           | 	      nop
+  0x00f: 6124         | 	      subl %edx,%esp
+  0x011: 10           | 	      nop
+  0x012: 10           | 	      nop
+  0x013: 00           | 	      halt

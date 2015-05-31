@@ -15,6 +15,8 @@
 #include "pipeline.h"
 #include "stages.h"
 #include "sim.h"
+#include "bus.h"
+#include "lock.h"
 
 #define MAXBUF 1024
 #define DEFAULTNAME "Y86 Simulator: "
@@ -768,7 +770,8 @@ int sim_run_pipe(int max_instr, int max_cycle, byte_t *statusp, cc_t *ccp) {
 	enter_bus(mem);
 
 	while (icount < max_instr && ccount < max_cycle) {
-		response(mem, TRUE);
+		acquire_lock(bus_lock, mem);
+		release_lock(bus_lock);
 		run_status = sim_step_pipe(max_instr - icount, ccount);
 		if (run_status != STAT_BUB)
 			icount++;

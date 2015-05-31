@@ -1,0 +1,4 @@
+  0x000:              | Main:	
+  0x000: 500f88130000 | 	mrmovl $5000,%eax
+  0x006: 400f00000000 | 	rmmovl %eax,$0
+  0x00c: 00           | 	halt

@@ -8,6 +8,7 @@
 #include "shared_memory.h"
 
 int main() {
+	my_id = 137;
 	bus_ptr = get_shared_memory_phy(BUS_PATH, BUS_SIZE);
 	shared_ptr = get_shared_memory_phy(SHARED_MEMORY_PATH, SHARED_MEMORY_SIZE);
 
@@ -17,26 +18,29 @@ int main() {
 	puts("Waiting for 2 clients");
 
 	for (;;) {
-		acquire_lock(bus_lock);
-		if (bus[BUS_CLIENT_COUNT] == 2) {
+		if (bus[BUS_CLIENT_COUNT] >= 1) {
 			break;
 		}
-		release_lock(bus_lock);
-		usleep(3);
+		usleep(33);
 	}
-	release_lock(bus_lock);
+
+	puts("Now, 1 clients are ready!");
+
+	for (;;) {
+		if (bus[BUS_CLIENT_COUNT] >= 2) {
+			break;
+		}
+		usleep(33);
+	}
 
 	puts("Now, 2 clients are ready!");
 
 	for (;;) {
-		acquire_lock(bus_lock);
 		if (bus[BUS_EXITED] == 3) {
 			break;
 		}
-		release_lock(bus_lock);
-		usleep(3);
+		usleep(33);
 	}
-	release_lock(bus_lock);
 
 	puts("Now, 2 clients are finished!");
 	return 0;

@@ -3,14 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "isa.h"
+#include "bus.h"
 
 /* Are we running in GUI mode? */
 extern int gui_mode;
 
 /* Bytes Per Line = Block size of memory */
 #define BPL 32
-
-int my_id;
 
 struct {
 	char *name;
@@ -354,19 +353,19 @@ void commit_cache(mem_t mem, cache_blk_t blk, word_t addr) {
 void enter_bus(mem_t mem) {
 
 	int* bus = mem->bus;
-	acquire_lock(bus_lock);
+//	acquire_lock(bus_lock, mem);
 
 	assert(bus[BUS_TYPE] == 0);
 	my_id = bus[BUS_CLIENT_COUNT]++;
 	assert(bus[BUS_CLIENT_COUNT] <= 2);
 
-	release_lock(bus_lock);
+//	release_lock(bus_lock);
+//	fprintf(stderr, "HI~\n");
 }
 
 void leave_bus(mem_t mem) {
 	int* bus = mem->bus;
-	acquire_lock(bus_lock);
-	response(mem, FALSE);
+	acquire_lock(bus_lock, mem);
 
 	//bye bye~
 	//commit everything and go away~
@@ -390,16 +389,17 @@ void broadcast(mem_t mem, int type, int addr) {
 	if (addr < OWN_MEMORY_SIZE)
 		return;
 	int*bus = mem->bus;
-	acquire_lock(bus_lock);
 
 	if (bus[BUS_CLIENT_COUNT] == 1) {
-		//no need to broadcast
-		release_lock(bus_lock);
 		return;
 	}
 
-	//check whether there are message on the bus first.
-	response(mem, FALSE);
+	int other_id = 1 - my_id;
+	if (bus[BUS_CLIENT_COUNT] == 2 && (bus[BUS_EXITED] >> other_id & 1)) {
+		return;
+	}
+
+	fprintf(stderr, "Boradcast! %d %c %d\n", my_id, (char) type, addr);
 
 	//There should be no message left here
 	assert(bus[BUS_TYPE] == 0);
@@ -407,19 +407,13 @@ void broadcast(mem_t mem, int type, int addr) {
 	bus[BUS_ID] = my_id;
 	bus[BUS_TYPE] = type;
 	bus[BUS_ADDR] = addr;
-
-	release_lock(bus_lock);
 //waiting on this broadcast to be finished
 	sem_wait(broadcast_finished);
 }
 
-void response(mem_t mem, bool_t need_lock) {
-	if (need_lock)
-		acquire_lock(bus_lock);
+void response(mem_t mem) {
 	int* bus = mem->bus;
 	if (bus[BUS_TYPE] == 0) {
-		if (need_lock)
-			release_lock(bus_lock);
 		return;
 	}
 
@@ -428,8 +422,6 @@ void response(mem_t mem, bool_t need_lock) {
 	word_t addr = bus[BUS_ADDR];
 
 	if (type == 0 || my_id == id) {
-		if (need_lock)
-			release_lock(bus_lock);
 		return;
 	}
 
@@ -437,8 +429,6 @@ void response(mem_t mem, bool_t need_lock) {
 	if (blk == NULL) {
 		clear_bus(bus);
 		sem_post(broadcast_finished);
-		if (need_lock)
-			release_lock(bus_lock);
 		return;
 	}
 
@@ -454,8 +444,6 @@ void response(mem_t mem, bool_t need_lock) {
 
 	clear_bus(bus);
 	sem_post(broadcast_finished);
-	if (need_lock)
-		release_lock(bus_lock);
 	return;
 }
 
@@ -467,6 +455,12 @@ bool_t get_byte_val(mem_t m, word_t pos, byte_t *dest) {
 		*dest = m->contents[pos];
 		return TRUE;
 	}
+
+	bool_t need_lock = !is_my_lock(bus_lock);
+	if (need_lock) {
+		acquire_lock(bus_lock, m);
+	}
+
 	cache_blk_t blk = find_cache_blk(m->cache, pos);
 	if (blk == NULL) {
 		blk = load_cache(m, pos);
@@ -474,6 +468,9 @@ bool_t get_byte_val(mem_t m, word_t pos, byte_t *dest) {
 
 	word_t offset = GET_ADDR_BLOCK(pos);
 	*dest = blk->contents[offset];
+	if (need_lock) {
+		release_lock(bus_lock);
+	}
 	return TRUE;
 }
 
@@ -482,14 +479,29 @@ bool_t get_word_val(mem_t m, word_t pos, word_t *dest) {
 	word_t val;
 	if (pos < 0 || pos + 4 > m->len)
 		return FALSE;
+	if (!m->cache) {
+		*dest = *(int*) (m->contents + pos);
+		return TRUE;
+	}
+	bool_t need_lock = !is_my_lock(bus_lock);
+	if (need_lock) {
+		acquire_lock(bus_lock, m);
+	}
 	val = 0;
 	for (i = 0; i < 4; i++) {
 		byte_t b;
-		if (!get_byte_val(m, pos + i, &b))
+		if (!get_byte_val(m, pos + i, &b)) {
+			if (need_lock) {
+				release_lock(bus_lock);
+			}
 			return FALSE;
+		}
 		val = val | b << (8 * i);
 	}
 	*dest = val;
+	if (need_lock) {
+		release_lock(bus_lock);
+	}
 	return TRUE;
 }
 
@@ -501,6 +513,11 @@ bool_t set_byte_val(mem_t m, word_t pos, byte_t val) {
 		m->contents[pos] = val;
 		return TRUE;
 	}
+
+	bool_t need_lock = !is_my_lock(bus_lock);
+	if (need_lock) {
+		acquire_lock(bus_lock, m);
+	}
 	cache_blk_t blk = find_cache_blk(m->cache, pos);
 	if (blk == NULL) {
 		blk = load_cache(m, pos);
@@ -509,6 +526,9 @@ bool_t set_byte_val(mem_t m, word_t pos, byte_t val) {
 	broadcast(m, 'W', pos);
 	blk->contents[GET_ADDR_BLOCK(pos)] = val;
 	blk->dirty = TRUE;
+	if (need_lock) {
+		release_lock(bus_lock);
+	}
 	return TRUE;
 }
 
@@ -516,12 +536,74 @@ bool_t set_word_val(mem_t m, word_t pos, word_t val) {
 	int i;
 	if (pos < 0 || pos + 4 > m->len)
 		return FALSE;
+	if (!m->cache) {
+		*(int*) (m->contents + pos) = val;
+		return TRUE;
+	}
+	fprintf(stderr, "HI~\n");
+	bool_t need_lock = !is_my_lock(bus_lock);
+	if (need_lock) {
+		acquire_lock(bus_lock, m);
+	}
 	for (i = 0; i < 4; i++) {
-		if (!set_byte_val(m, pos + i, val & 0xFF))
+		if (!set_byte_val(m, pos + i, val & 0xFF)) {
+			if (need_lock) {
+				release_lock(bus_lock);
+			}
 			return FALSE;
+		}
 		val >>= 8;
 	}
+	if (need_lock) {
+		release_lock(bus_lock);
+	}
 	return TRUE;
+}
+
+bool_t get_and_set_byte_val(mem_t m, word_t pos, byte_t*dest, byte_t val) {
+	if (pos < 0 || pos + 4 > m->len)
+		return FALSE;
+	if (!m->cache) {
+		*dest = m->contents[pos];
+		m->contents[pos] = val;
+		return TRUE;
+	}
+	bool_t need_lock = !is_my_lock(bus_lock);
+	if (need_lock) {
+		acquire_lock(bus_lock, m);
+	}
+	bool_t ok = FALSE;
+	if (get_byte_val(m, pos, dest)) {
+		if (set_byte_val(m, pos, val)) {
+			ok = TRUE;
+		}
+	}
+	if (need_lock) {
+		release_lock(bus_lock);
+	}
+	return ok;
+}
+
+bool_t get_and_set_word_val(mem_t m, word_t pos, word_t*dest, word_t val) {
+	if (pos < 0 || pos + 4 > m->len)
+		return FALSE;
+	if (!m->cache) {
+		*dest = *(int*) (m->contents + pos);
+		*(int*) (m->contents + pos) = val;
+		return TRUE;
+	}
+	bool_t need_lock = !is_my_lock(bus_lock);
+	if (need_lock) {
+		acquire_lock(bus_lock, m);
+	}
+	bool_t ok = FALSE;
+	if (get_word_val(m, pos, dest) && set_word_val(m, pos, val)) {
+		ok = TRUE;
+	}
+	if (need_lock) {
+		release_lock(bus_lock);
+	}
+	return ok;
 }
 
 void dump_memory(FILE *outfile, mem_t m, word_t pos, int len) {

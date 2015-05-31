@@ -1,0 +1,4 @@
+Main:	
+	mrmovl $5000,%eax
+	rmmovl %eax,$0
+	halt

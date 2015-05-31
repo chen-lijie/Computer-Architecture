@@ -20,13 +20,15 @@ void init_bus(int*bus) {
 void init_bus_lock() {
 	bus_lock = &bus_lock_rec;
 	bus_lock->name = BUS_LOCK;
-	init_lock(bus_lock);
+	int*bus = (int*) get_bus();
+	init_lock(bus_lock, bus + 8);
 	broadcast_finished = sem_open(BUS_SEM, O_CREAT, 0644, 3);
 }
 
 void set_bus_lock() {
 	bus_lock = &bus_lock_rec;
 	bus_lock->name = BUS_LOCK;
-	set_lock(bus_lock);
+	int*bus = (int*) get_bus();
+	set_lock(bus_lock, bus + 8);
 	broadcast_finished = sem_open(BUS_SEM, O_CREAT, 0644, 3);
 }
