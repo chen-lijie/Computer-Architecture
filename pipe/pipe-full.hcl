@@ -32,6 +32,7 @@ intsig IRRMOVL	'I_RRMOVL'
 intsig IIRMOVL	'I_IRMOVL'
 intsig IRMMOVL	'I_RMMOVL'
 intsig IMRMOVL	'I_MRMOVL'
+intsig IRMSWAP	'I_RMSWAP'
 intsig IOPL	'I_ALU'
 intsig IJXX	'I_JMP'
 intsig ICALL	'I_CALL'
@@ -161,7 +162,7 @@ int f_ifun = [
 # Is instruction valid?
 #MODIFICATIONS HERE
 bool instr_valid = f_icode in 
-	{ INOP, IHALT, IRRMOVL, IIRMOVL, IRMMOVL, IMRMOVL,
+	{ INOP, IHALT, IRRMOVL, IIRMOVL, IRMMOVL, IMRMOVL, IRMSWAP, 
 	  IOPL, IJXX, ICALL, IRET, IPUSHL, IPOPL, IIADDL, ILEAVE };
 
 # Determine status code for fetched instruction
@@ -181,7 +182,7 @@ bool need_regids =
 # Does fetched instruction require a constant word?
 #MODIFICATIONS HERE
 bool need_valC =
-	f_icode in { IIRMOVL, IRMMOVL, IMRMOVL, IJXX, ICALL, IIADDL };
+	f_icode in { IIRMOVL, IRMMOVL, IMRMOVL, IJXX, ICALL, IIADDL, IRMSWAP };
 
 # Predict next value of PC
 int f_predPC = [
@@ -195,7 +196,7 @@ int f_predPC = [
 ## What register should be used as the A source?
 #MODIFICATIONS HERE
 int d_srcA = [
-	D_icode in { IRRMOVL, IRMMOVL, IOPL, IPUSHL  } : D_rA;
+	D_icode in { IRRMOVL, IRMMOVL, IOPL, IPUSHL, IRMSWAP  } : D_rA;
 	D_icode in { IPOPL, IRET } : RESP;
 	D_icode in { ILEAVE } : REBP;
 	1 : RNONE; # Don't need register
@@ -204,7 +205,7 @@ int d_srcA = [
 ## What register should be used as the B source?
 #MODIFICATIONS HERE
 int d_srcB = [
-	D_icode in { IOPL, IRMMOVL, IMRMOVL, IIADDL } : D_rB;
+	D_icode in { IOPL, IRMMOVL, IMRMOVL, IIADDL, IRMSWAP } : D_rB;
 	D_icode in { IPUSHL, IPOPL, ICALL, IRET } : RESP;
 	D_icode in { ILEAVE } : REBP;
 	1 : RNONE;  # Don't need register
@@ -253,7 +254,7 @@ int d_valB = [
 #MODIFICATIONS HERE
 int aluA = [
 	E_icode in { IRRMOVL, IOPL } : E_valA;
-	E_icode in { IIRMOVL, IRMMOVL, IMRMOVL, IIADDL } : E_valC;
+	E_icode in { IIRMOVL, IRMMOVL, IMRMOVL, IIADDL, IRMSWAP } : E_valC;
 	E_icode in { ICALL, IPUSHL } : -4;
 	E_icode in { IRET, IPOPL, ILEAVE } : 4;
 	# Other instructions don't need ALU
@@ -263,7 +264,7 @@ int aluA = [
 #MODIFICATIONS HERE
 int aluB = [
 	E_icode in { IRMMOVL, IMRMOVL, IOPL, ICALL, 
-		     IPUSHL, IRET, IPOPL, IIADDL, ILEAVE} : E_valB;
+		     IPUSHL, IRET, IPOPL, IIADDL, ILEAVE, IRMSWAP} : E_valB;
 	E_icode in { IRRMOVL, IIRMOVL } : 0;
 	# Other instructions don't need ALU
 ];
@@ -294,16 +295,16 @@ int e_dstE = [
 ## Select memory address
 #MODIFICATIONS HERE
 int mem_addr = [
-	M_icode in { IRMMOVL, IPUSHL, ICALL, IMRMOVL } : M_valE;
+	M_icode in { IRMMOVL, IPUSHL, ICALL, IMRMOVL, IRMSWAP } : M_valE;
 	M_icode in { IPOPL, IRET, ILEAVE } : M_valA;
 	# Other instructions don't need address
 ];
 
 ## Set read control signal
-bool mem_read = M_icode in { IMRMOVL, IPOPL, IRET, ILEAVE};
+bool mem_read = M_icode in { IMRMOVL, IPOPL, IRET, ILEAVE, IRMSWAP};
 
 ## Set write control signal
-bool mem_write = M_icode in { IRMMOVL, IPUSHL, ICALL };
+bool mem_write = M_icode in { IRMMOVL, IPUSHL, ICALL, IRMSWAP };
 
 #/* $begin pipe-m_stat-hcl */
 ## Update the status

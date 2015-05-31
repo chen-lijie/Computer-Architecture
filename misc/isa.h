@@ -51,6 +51,7 @@ typedef enum {
 	I_IRMOVL,
 	I_RMMOVL,
 	I_MRMOVL,
+	I_RMSWAP,
 	I_ALU,
 	I_JMP,
 	I_CALL,
