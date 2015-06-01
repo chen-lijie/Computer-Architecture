@@ -452,7 +452,7 @@ bool_t get_byte_val(mem_t m, word_t pos, byte_t *dest) {
 	if (pos < 0 || pos >= m->len)
 		return FALSE;
 
-	if (!m->cache) {
+	if (m->cache == NULL) {
 		*dest = m->contents[pos];
 		return TRUE;
 	}
@@ -476,11 +476,12 @@ bool_t get_byte_val(mem_t m, word_t pos, byte_t *dest) {
 }
 
 bool_t get_word_val(mem_t m, word_t pos, word_t *dest) {
+//	fprintf(stdout, "reading: %d\n", pos);
 	int i;
 	word_t val;
 	if (pos < 0 || pos + 4 > m->len)
 		return FALSE;
-	if (!m->cache) {
+	if (m->cache == NULL) {
 		*dest = *(int*) (m->contents + pos);
 		return TRUE;
 	}
@@ -541,7 +542,6 @@ bool_t set_word_val(mem_t m, word_t pos, word_t val) {
 		*(int*) (m->contents + pos) = val;
 		return TRUE;
 	}
-	fprintf(stderr, "HI~\n");
 	bool_t need_lock = !is_my_lock(bus_lock);
 	if (need_lock) {
 		acquire_lock(bus_lock, m);
@@ -891,7 +891,7 @@ stat_t step_state(state_ptr s, FILE *error_file) {
 
 	need_regids = (hi0 == I_RRMOVL || hi0 == I_ALU || hi0 == I_PUSHL
 			|| hi0 == I_POPL || hi0 == I_IRMOVL || hi0 == I_RMMOVL
-			|| hi0 == I_MRMOVL || hi0 == I_IADDL);
+			|| hi0 == I_MRMOVL || hi0 == I_IADDL || hi0 == I_RMSWAP);
 
 	if (need_regids) {
 		ok1 = get_byte_val(s->m, ftpc, &byte1);
@@ -901,7 +901,8 @@ stat_t step_state(state_ptr s, FILE *error_file) {
 	}
 
 	need_imm = (hi0 == I_IRMOVL || hi0 == I_RMMOVL || hi0 == I_MRMOVL
-			|| hi0 == I_JMP || hi0 == I_CALL || hi0 == I_IADDL);
+			|| hi0 == I_JMP || hi0 == I_CALL || hi0 == I_IADDL
+			|| hi0 == I_RMSWAP);
 
 	if (need_imm) {
 		okc = get_word_val(s->m, ftpc, &cval);
@@ -1167,6 +1168,38 @@ stat_t step_state(state_ptr s, FILE *error_file) {
 		val = argB + cval;
 		set_reg_val(s->r, lo1, val);
 		s->cc = compute_cc(A_ADD, cval, argB);
+		s->pc = ftpc;
+		break;
+	case I_RMSWAP:
+		if (!ok1) {
+			if (error_file)
+				fprintf(error_file, "PC = 0x%x, Invalid instruction address\n",
+						s->pc);
+			return STAT_ADR;
+		}
+		if (!okc) {
+			if (error_file)
+				fprintf(error_file, "PC = 0x%x, Invalid instruction address\n",
+						s->pc);
+			return STAT_INS;
+		}
+		if (!reg_valid(hi1)) {
+			if (error_file)
+				fprintf(error_file, "PC = 0x%x, Invalid register ID 0x%.1x\n",
+						s->pc, hi1);
+			return STAT_INS;
+		}
+		if (reg_valid(lo1))
+			cval += get_reg_val(s->r, lo1);
+		if (!get_word_val(s->m, cval, &val))
+			return STAT_ADR;
+		if (!set_word_val(s->m, cval, 1)) {
+			if (error_file)
+				fprintf(error_file, "PC = 0x%x, Invalid data address 0x%x\n",
+						s->pc, cval);
+			return STAT_ADR;
+		}
+		set_reg_val(s->r, hi1, val);
 		s->pc = ftpc;
 		break;
 	default:

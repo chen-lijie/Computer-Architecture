@@ -1,0 +1,10 @@
+# Execution begins at address 0
+	.pos 0
+  irmovl 0x0100, %eax
+  irmovl 0x0200, %ecx
+nop
+nop
+rmswap %ecx, (%eax)
+nop
+nop
+nop

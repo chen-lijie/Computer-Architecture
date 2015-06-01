@@ -1,8 +1,8 @@
                       | # Demonstrate branch cancellation
                       | # /* $begin prog8-ys */
                       | # prog8
-  0x000: 6300         |    xorl %eax,%eax 
-  0x002: 740e000000   |    jne  target        # Not taken
+  0x000: 7300         |    xorl %eax,%eax 
+  0x002: 840e000000   |    jne  target        # Not taken
   0x007: 30f001000000 |    irmovl $1, %eax    # Fall through
   0x00d: 00           |    halt
   0x00e:              | target:

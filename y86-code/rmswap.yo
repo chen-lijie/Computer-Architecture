@@ -1,0 +1,10 @@
+                      | # Execution begins at address 0
+  0x000:              | 	.pos 0
+  0x000: 30f000010000 |   irmovl 0x0100, %eax
+  0x006: 30f100020000 |   irmovl 0x0200, %ecx
+  0x00c: 10           | nop
+  0x00d: 10           | nop
+  0x00e: 601000000000 | rmswap %ecx, (%eax)
+  0x014: 10           | nop
+  0x015: 10           | nop
+  0x016: 10           | nop

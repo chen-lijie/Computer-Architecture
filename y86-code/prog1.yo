@@ -4,5 +4,5 @@
   0x00c: 10           |   nop
   0x00d: 10           |   nop
   0x00e: 10           |   nop
-  0x00f: 6020         |   addl %edx,%eax
+  0x00f: 7020         |   addl %edx,%eax
   0x011: 00           |   halt

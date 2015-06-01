@@ -328,7 +328,9 @@ word_t wb_destM = REG_NONE;
 word_t wb_valM = 0;
 word_t mem_addr = 0;
 word_t mem_data = 0;
+word_t mem_destE = REG_NONE;
 bool_t mem_write = FALSE;
+bool_t mem_swap_reg = FALSE;
 
 /* EX Operand sources */
 mux_source_t amux = MUX_NONE;
@@ -610,11 +612,17 @@ static void update_state(bool_t update_mem, bool_t update_cc) {
 	 Order of two writes determines semantics of
 	 popl %esp.  According to ISA, %esp will get popped value
 	 */
+	if (mem_swap_reg) {
+		int mem_valE;
+		get_and_set_word_val(mem, mem_addr, &mem_valE, mem_data);
+		set_reg_val(reg, mem_destE, mem_valE);
+	}
 
 	if (wb_destE != REG_NONE) {
+		set_reg_val(reg, wb_destE, wb_valE);
+
 		sim_log("\tWriteback: Wrote 0x%x to register %s\n", wb_valE,
 				reg_name(wb_destE));
-		set_reg_val(reg, wb_destE, wb_valE);
 	}
 	if (wb_destM != REG_NONE) {
 		sim_log("\tWriteback: Wrote 0x%x to register %s\n", wb_valM,
@@ -628,7 +636,7 @@ static void update_state(bool_t update_mem, bool_t update_cc) {
 				mem_addr);
 	}
 	if (update_mem && mem_write) {
-		if (!set_word_val(mem, mem_addr, mem_data)) {
+		if (!mem_swap_reg && !set_word_val(mem, mem_addr, mem_data)) {
 			sim_log("\tCouldn't write to address 0x%x\n", mem_addr);
 		} else {
 			sim_log("\tWrote 0x%x to address 0x%x\n", mem_data, mem_addr);
@@ -1531,6 +1539,7 @@ void do_mem_stage() {
 	mem_addr = gen_mem_addr();
 	mem_data = ex_mem_curr->vala;
 	mem_write = gen_mem_write();
+	mem_destE = ex_mem_curr->deste;
 	dmem_error = FALSE;
 
 	if (read) {
@@ -1544,6 +1553,14 @@ void do_mem_stage() {
 		dmem_error = dmem_error || !get_word_val(mem, mem_addr, &sink);
 		if (dmem_error)
 			sim_log("\tMemory: Invalid address 0x%x\n", mem_addr);
+	}
+	//It is IRMSWAP only if it both read and write memory
+	if (read == TRUE && mem_write == TRUE) {
+		fprintf(stderr, "HIHIHI~\n");
+		mem_swap_reg = TRUE;
+	} else {
+		fprintf(stderr, "NONONO~\n");
+		mem_swap_reg = FALSE;
 	}
 	mem_wb_next->icode = ex_mem_curr->icode;
 	mem_wb_next->ifun = ex_mem_curr->ifun;

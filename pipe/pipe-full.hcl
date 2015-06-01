@@ -177,7 +177,7 @@ int f_stat = [
 #MODIFICATIONS HERE
 bool need_regids =
 	f_icode in { IRRMOVL, IOPL, IPUSHL, IPOPL, 
-		     IIRMOVL, IRMMOVL, IMRMOVL, IIADDL };
+		     IIRMOVL, IRMMOVL, IMRMOVL, IIADDL, IRMSWAP  };
 
 # Does fetched instruction require a constant word?
 #MODIFICATIONS HERE
@@ -216,6 +216,7 @@ int d_srcB = [
 int d_dstE = [
 	D_icode in { IRRMOVL, IIRMOVL, IOPL, IIADDL } : D_rB;
 	D_icode in { IPUSHL, IPOPL, ICALL, IRET, ILEAVE} : RESP;
+	D_icode in { IRMSWAP} : D_rA;
 	1 : RNONE;  # Don't write any register
 ];
 
@@ -338,6 +339,7 @@ int Stat = [
 # At most one of these can be true.
 bool F_bubble = 0;
 bool F_stall =
+	E_icode == IRMSWAP ||
 	# Conditions for a load/use hazard
 	E_icode in { IMRMOVL, IPOPL } &&
 	 E_dstM in { d_srcA, d_srcB } ||
@@ -347,6 +349,7 @@ bool F_stall =
 # Should I stall or inject a bubble into Pipeline Register D?
 # At most one of these can be true.
 bool D_stall = 
+	E_icode == IRMSWAP ||
 	# Conditions for a load/use hazard
 	E_icode in { IMRMOVL, IPOPL } &&
 	 E_dstM in { d_srcA, d_srcB };
@@ -356,7 +359,7 @@ bool D_bubble =
 	(E_icode == IJXX && !e_Cnd) ||
 	# Stalling at fetch while ret passes through pipeline
 	# but not condition for a load/use hazard
-	!(E_icode in { IMRMOVL, IPOPL } && E_dstM in { d_srcA, d_srcB }) &&
+	!(E_icode == IRMSWAP || E_icode in { IMRMOVL, IPOPL } && E_dstM in { d_srcA, d_srcB }) &&
 	  IRET in { D_icode, E_icode, M_icode };
 
 # Should I stall or inject a bubble into Pipeline Register E?
@@ -365,6 +368,7 @@ bool E_stall = 0;
 bool E_bubble =
 	# Mispredicted branch
 	(E_icode == IJXX && !e_Cnd) ||
+	E_icode == IRMSWAP ||
 	# Conditions for a load/use hazard
 	E_icode in { IMRMOVL, IPOPL } &&
 	 E_dstM in { d_srcA, d_srcB};

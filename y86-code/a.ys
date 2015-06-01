@@ -1,0 +1,2 @@
+irmovl 0x0100, %eax
+irmovl 0x0200, %ecx
