@@ -322,7 +322,7 @@ cache_blk_t load_cache(mem_t mem, word_t addr) {
 	//otherwise pick a random one
 	if (rep == NULL) {
 		rep = cache->blks[set] + (rand() % NUM_WAYS);
-		commit_cache(mem, rep, (rep->tag) << (SET_LENGTH + BLOCK_LENGTH));
+		commit_cache(mem, rep, BLOCK_START(rep->tag,set));
 	}
 	rep->tag = tag;
 	rep->valid = TRUE;
@@ -375,7 +375,7 @@ void leave_bus(mem_t mem) {
 		for (j = 0; j < NUM_WAYS; ++j) {
 			cache_blk_t blk = mem->cache->blks[i] + j;
 			if (blk->valid && blk->dirty)
-				commit_cache(mem, blk, blk->tag << (SET_LENGTH + BLOCK_LENGTH));
+				commit_cache(mem, blk, BLOCK_START(blk->tag,i));
 		}
 	}
 

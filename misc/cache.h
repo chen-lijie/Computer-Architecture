@@ -23,6 +23,7 @@
 #define SET_LENGTH 3
 #define NUM_WAYS 8
 #define TAG_LENGTH (MEMORY_LENGTH - BLOCK_LENGTH - SET_LENGTH)
+#define BLOCK_START(TAG,SET) ((((TAG)<<(SET_LENGTH))+SET)<<BLOCK_LENGTH)
 
 /*
  * addr splits as TAG/SET/BLOCK
