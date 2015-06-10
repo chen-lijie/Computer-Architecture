@@ -216,14 +216,13 @@ int d_srcB = [
 int d_dstE = [
 	D_icode in { IRRMOVL, IIRMOVL, IOPL, IIADDL } : D_rB;
 	D_icode in { IPUSHL, IPOPL, ICALL, IRET, ILEAVE} : RESP;
-	D_icode in { IRMSWAP} : D_rA;
 	1 : RNONE;  # Don't write any register
 ];
 
 ## What register should be used as the M destination?
 #MODIFICATIONS HERE
 int d_dstM = [
-	D_icode in { IMRMOVL, IPOPL } : D_rA;
+	D_icode in { IMRMOVL, IPOPL, IRMSWAP} : D_rA;
 	D_icode in { ILEAVE } : REBP;
 	1 : RNONE;  # Don't write any register
 ];
@@ -333,45 +332,42 @@ int Stat = [
 	1 : W_stat;
 ];
 
-################ Pipeline Register Control #########################
+  ################ Pipeline Register Control #########################
 
 # Should I stall or inject a bubble into Pipeline Register F?
 # At most one of these can be true.
 bool F_bubble = 0;
 bool F_stall =
-	E_icode == IRMSWAP ||
-	# Conditions for a load/use hazard
-	E_icode in { IMRMOVL, IPOPL } &&
-	 E_dstM in { d_srcA, d_srcB } ||
-	# Stalling at fetch while ret passes through pipeline
-	IRET in { D_icode, E_icode, M_icode };
+# Conditions for a load/use hazard
+E_icode in { IMRMOVL, IPOPL, IRMSWAP} &&
+ E_dstM in { d_srcA, d_srcB } ||
+# Stalling at fetch while ret passes through pipeline
+IRET in { D_icode, E_icode, M_icode };
 
 # Should I stall or inject a bubble into Pipeline Register D?
 # At most one of these can be true.
 bool D_stall = 
-	E_icode == IRMSWAP ||
-	# Conditions for a load/use hazard
-	E_icode in { IMRMOVL, IPOPL } &&
-	 E_dstM in { d_srcA, d_srcB };
+# Conditions for a load/use hazard
+E_icode in { IMRMOVL, IPOPL, IRMSWAP} &&
+ E_dstM in { d_srcA, d_srcB };
 
 bool D_bubble =
-	# Mispredicted branch
-	(E_icode == IJXX && !e_Cnd) ||
-	# Stalling at fetch while ret passes through pipeline
-	# but not condition for a load/use hazard
-	!(E_icode == IRMSWAP || E_icode in { IMRMOVL, IPOPL } && E_dstM in { d_srcA, d_srcB }) &&
-	  IRET in { D_icode, E_icode, M_icode };
+# Mispredicted branch
+(E_icode == IJXX && !e_Cnd) ||
+# Stalling at fetch while ret passes through pipeline
+# but not condition for a load/use hazard
+!(E_icode in { IMRMOVL, IPOPL, IRMSWAP } && E_dstM in { d_srcA, d_srcB }) &&
+  IRET in { D_icode, E_icode, M_icode };
 
 # Should I stall or inject a bubble into Pipeline Register E?
 # At most one of these can be true.
 bool E_stall = 0;
 bool E_bubble =
-	# Mispredicted branch
-	(E_icode == IJXX && !e_Cnd) ||
-	E_icode == IRMSWAP ||
-	# Conditions for a load/use hazard
-	E_icode in { IMRMOVL, IPOPL } &&
-	 E_dstM in { d_srcA, d_srcB};
+# Mispredicted branch
+(E_icode == IJXX && !e_Cnd) ||
+# Conditions for a load/use hazard
+E_icode in { IMRMOVL, IPOPL, IRMSWAP } &&
+ E_dstM in { d_srcA, d_srcB};
 
 # Should I stall or inject a bubble into Pipeline Register M?
 # At most one of these can be true.
@@ -382,4 +378,4 @@ bool M_bubble = m_stat in { SADR, SINS, SHLT } || W_stat in { SADR, SINS, SHLT }
 # Should I stall or inject a bubble into Pipeline Register W?
 bool W_stall = W_stat in { SADR, SINS, SHLT };
 bool W_bubble = 0;
-#/* $end pipe-all-hcl */
+#/* $end pipe-all-hcl */ 

@@ -328,7 +328,7 @@ word_t wb_destM = REG_NONE;
 word_t wb_valM = 0;
 word_t mem_addr = 0;
 word_t mem_data = 0;
-word_t mem_destE = REG_NONE;
+word_t mem_destM = REG_NONE;
 bool_t mem_write = FALSE;
 bool_t mem_swap_reg = FALSE;
 
@@ -613,9 +613,9 @@ static void update_state(bool_t update_mem, bool_t update_cc) {
 	 popl %esp.  According to ISA, %esp will get popped value
 	 */
 	if (mem_swap_reg) {
-		int mem_valE;
-		get_and_set_word_val(mem, mem_addr, &mem_valE, mem_data);
-		set_reg_val(reg, mem_destE, mem_valE);
+		int mem_valM;
+		get_and_set_word_val(mem, mem_addr, &mem_valM, mem_data);
+		set_reg_val(reg, mem_destM, mem_valM);
 	}
 
 	if (wb_destE != REG_NONE) {
@@ -1539,7 +1539,7 @@ void do_mem_stage() {
 	mem_addr = gen_mem_addr();
 	mem_data = ex_mem_curr->vala;
 	mem_write = gen_mem_write();
-	mem_destE = ex_mem_curr->deste;
+	mem_destM = ex_mem_curr->destm;
 	dmem_error = FALSE;
 
 	if (read) {
@@ -1556,10 +1556,8 @@ void do_mem_stage() {
 	}
 	//It is IRMSWAP only if it both read and write memory
 	if (read == TRUE && mem_write == TRUE) {
-		fprintf(stderr, "HIHIHI~\n");
 		mem_swap_reg = TRUE;
 	} else {
-		fprintf(stderr, "NONONO~\n");
 		mem_swap_reg = FALSE;
 	}
 	mem_wb_next->icode = ex_mem_curr->icode;

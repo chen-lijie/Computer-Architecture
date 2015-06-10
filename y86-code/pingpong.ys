@@ -1,0 +1,109 @@
+# 0x1000 shared start
+# The first starter is A
+# The second starter is B
+# On 0-th round, A sends 0 to B
+# B returns 1,2 to A
+# A returns 3,4,5 to B,
+# B returns 6.7,8,9 to A,
+# etc.
+
+# They will wait for the other side to receive.
+
+# %eax the shared start, all memory should be initialize zero by bus
+# %ebx my id
+# %ecx op id
+# %esi #round
+
+# 0x1000: the id of next one
+# 0x1010: the lock variable (initialy it is 0, so the lock belong to A at first)
+
+.pos 0
+irmovl 0x1000, %eax
+irmovl 0x1, %ebx
+rmswap %ebx, (%eax)
+irmovl 0x1, %ecx
+xorl %ebx, %ecx # %ecx = %ebx ^ 1
+irmovl 10, %esi
+
+irmovl 0x800, %esp       # set up stack
+irmovl 0x800, %ebp
+
+loop:
+	pushl %eax
+	call lock
+	popl %eax
+	
+	pushl %eax
+	pushl %ecx
+	pushl %edx
+	call send
+	popl %edx
+	popl %ecx
+	popl %eax
+	
+	irmovl 1, %edi
+	subl %edi,%esi
+	andl %esi,%esi
+	
+    rmmovl %ecx, 0x10(%eax)    # release lock
+	
+	jne loop
+	
+end:
+	halt
+
+lock:                      #get the lock!
+  pushl  %ebp
+  rrmovl %esp, %ebp
+  pushl  %edi
+
+L1:
+  irmovl 0x1010, %eax
+  mrmovl (%eax), %edi
+  xorl   %ebx, %edi
+  jne    L1
+
+  popl   %edi
+  rrmovl %ebp, %esp
+  popl   %ebp
+  ret
+ 
+#0x1080, the current message length, the message is on 0x1084,0x1088,..., and so on
+send:
+    pushl  %ebp
+    rrmovl %esp, %ebp
+    pushl  %edi
+    pushl  %esi
+    pushl  %ebx
+    
+	irmovl 0x1080, %eax
+	mrmovl (%eax), %ebx # the length of message
+	rrmovl %eax, %edi
+	
+	addl %ebx,%edi
+	addl %ebx,%edi
+	addl %ebx,%edi
+	addl %ebx,%edi
+	
+	mrmovl (%edi), %edx # the previous last value
+	
+	iaddl 1, %ebx # increase the length by 1
+	rmmovl %ebx, (%eax)
+	
+	
+	L2:
+		iaddl 4, %eax
+		iaddl 1, %edx
+		rmmovl %edx, (%eax)
+		irmovl 1, %edi
+		subl %edi, %ebx
+		andl %ebx, %ebx
+	jne L2
+	
+popl   %ebx
+popl   %esi
+popl   %edi
+rrmovl %ebp, %esp
+popl   %ebp
+ret
+

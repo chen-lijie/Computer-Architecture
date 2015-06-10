@@ -112,14 +112,16 @@ mem_t init_mem(int len, bool_t is_reg) {
 	if (is_reg) {
 		len = ((len + BPL - 1) / BPL) * BPL;
 		result->len = len;
-		result->contents = (byte_t *) calloc(len, 1);
+		result->contents = (byte_t *) malloc(len);
+		memset(result->contents, 0, len);
 		result->shared = NULL;
 		result->bus = NULL;
 		result->cache = NULL;
 	} else {
 		assert(len==0 || len== MEM_SIZE);
 		result->len = len;
-		result->contents = (byte_t *) calloc(OWN_MEMORY_SIZE, 1);
+		result->contents = (byte_t *) malloc(OWN_MEMORY_SIZE);
+		memset(result->contents, 0, OWN_MEMORY_SIZE);
 		result->shared = get_shared_memory();
 		result->bus = get_bus();
 		result->cache = new_cache();
@@ -152,7 +154,7 @@ bool_t diff_mem(mem_t oldm, mem_t newm, FILE *outfile) {
 	word_t pos;
 	int len = newm->len;
 	bool_t diff = FALSE;
-	if (newm->cache)
+	if (newm->cache || oldm->cache)
 		len = OWN_MEMORY_SIZE;
 	for (pos = 0; (!diff || outfile) && pos < len; pos += 4) {
 		word_t ov = 0;
@@ -409,7 +411,9 @@ void broadcast(mem_t mem, int type, int addr) {
 	bus[BUS_TYPE] = type;
 	bus[BUS_ADDR] = addr;
 //waiting on this broadcast to be finished
+	fprintf(stderr, "%d\n", broadcast_finished);
 	sem_wait(broadcast_finished);
+	assert(bus[BUS_TYPE] == 0);
 }
 
 void response(mem_t mem) {
@@ -426,10 +430,14 @@ void response(mem_t mem) {
 		return;
 	}
 
+	fprintf(stderr, "Responsed! %d %c %d\n", id, (char) type, addr);
+
 	cache_blk_t blk = find_cache_blk(mem->cache, addr);
 	if (blk == NULL) {
+		fprintf(stderr, "Cleared\n");
 		clear_bus(bus);
 		sem_post(broadcast_finished);
+		assert(bus[BUS_TYPE] == 0);
 		return;
 	}
 
@@ -443,8 +451,10 @@ void response(mem_t mem) {
 		blk->valid = FALSE;
 	}
 
+	fprintf(stderr, "Cleared\n");
 	clear_bus(bus);
 	sem_post(broadcast_finished);
+	assert(bus[BUS_TYPE] == 0);
 	return;
 }
 

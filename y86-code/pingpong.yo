@@ -1,0 +1,109 @@
+                      | # 0x1000 shared start
+                      | # The first starter is A
+                      | # The second starter is B
+                      | # On 0-th round, A sends 0 to B
+                      | # B returns 1,2 to A
+                      | # A returns 3,4,5 to B,
+                      | # B returns 6.7,8,9 to A,
+                      | # etc.
+                      | 
+                      | # They will wait for the other side to receive.
+                      | 
+                      | # %eax the shared start, all memory should be initialize zero by bus
+                      | # %ebx my id
+                      | # %ecx op id
+                      | # %esi #round
+                      | 
+                      | # 0x1000: the id of next one
+                      | # 0x1010: the lock variable (initialy it is 0, so the lock belong to A at first)
+                      | 
+  0x000:              | .pos 0
+  0x000: 30f000100000 | irmovl 0x1000, %eax
+  0x006: 30f301000000 | irmovl 0x1, %ebx
+  0x00c: 603000000000 | rmswap %ebx, (%eax)
+  0x012: 30f101000000 | irmovl 0x1, %ecx
+  0x018: 7331         | xorl %ebx, %ecx # %ecx = %ebx ^ 1
+  0x01a: 30f60a000000 | irmovl 10, %esi
+                      | 
+  0x020: 30f400080000 | irmovl 0x800, %esp       # set up stack
+  0x026: 30f500080000 | irmovl 0x800, %ebp
+                      | 
+  0x02c:              | loop:
+  0x02c: b00f         | 	pushl %eax
+  0x02e: 905c000000   | 	call lock
+  0x033: c00f         | 	popl %eax
+                      | 	
+  0x035: b00f         | 	pushl %eax
+  0x037: b01f         | 	pushl %ecx
+  0x039: b02f         | 	pushl %edx
+  0x03b: 907c000000   | 	call send
+  0x040: c02f         | 	popl %edx
+  0x042: c01f         | 	popl %ecx
+  0x044: c00f         | 	popl %eax
+                      | 	
+  0x046: 30f701000000 | 	irmovl 1, %edi
+  0x04c: 7176         | 	subl %edi,%esi
+  0x04e: 7266         | 	andl %esi,%esi
+                      | 	
+  0x050: 401010000000 |     rmmovl %ecx, 0x10(%eax)    # release lock
+                      | 	
+  0x056: 842c000000   | 	jne loop
+                      | 	
+  0x05b:              | end:
+  0x05b: 00           | 	halt
+                      | 
+  0x05c:              | lock:                      #get the lock!
+  0x05c: b05f         |   pushl  %ebp
+  0x05e: 2045         |   rrmovl %esp, %ebp
+  0x060: b07f         |   pushl  %edi
+                      | 
+  0x062:              | L1:
+  0x062: 30f010100000 |   irmovl 0x1010, %eax
+  0x068: 507000000000 |   mrmovl (%eax), %edi
+  0x06e: 7337         |   xorl   %ebx, %edi
+  0x070: 8462000000   |   jne    L1
+                      | 
+  0x075: c07f         |   popl   %edi
+  0x077: 2054         |   rrmovl %ebp, %esp
+  0x079: c05f         |   popl   %ebp
+  0x07b: a0           |   ret
+                      |  
+                      | #0x1080, the current message length, the message is on 0x1084,0x1088,..., and so on
+  0x07c:              | send:
+  0x07c: b05f         |     pushl  %ebp
+  0x07e: 2045         |     rrmovl %esp, %ebp
+  0x080: b07f         |     pushl  %edi
+  0x082: b06f         |     pushl  %esi
+  0x084: b03f         |     pushl  %ebx
+                      |     
+  0x086: 30f080100000 | 	irmovl 0x1080, %eax
+  0x08c: 503000000000 | 	mrmovl (%eax), %ebx # the length of message
+  0x092: 2007         | 	rrmovl %eax, %edi
+                      | 	
+  0x094: 7037         | 	addl %ebx,%edi
+  0x096: 7037         | 	addl %ebx,%edi
+  0x098: 7037         | 	addl %ebx,%edi
+  0x09a: 7037         | 	addl %ebx,%edi
+                      | 	
+  0x09c: 502700000000 | 	mrmovl (%edi), %edx # the previous last value
+                      | 	
+  0x0a2: d0f301000000 | 	iaddl 1, %ebx # increase the length by 1
+  0x0a8: 403000000000 | 	rmmovl %ebx, (%eax)
+                      | 	
+                      | 	
+  0x0ae:              | 	L2:
+  0x0ae: d0f004000000 | 		iaddl 4, %eax
+  0x0b4: d0f201000000 | 		iaddl 1, %edx
+  0x0ba: 402000000000 | 		rmmovl %edx, (%eax)
+  0x0c0: 30f701000000 | 		irmovl 1, %edi
+  0x0c6: 7173         | 		subl %edi, %ebx
+  0x0c8: 7233         | 		andl %ebx, %ebx
+  0x0ca: 84ae000000   | 	jne L2
+                      | 	
+  0x0cf: c03f         | popl   %ebx
+  0x0d1: c06f         | popl   %esi
+  0x0d3: c07f         | popl   %edi
+  0x0d5: 2054         | rrmovl %ebp, %esp
+  0x0d7: c05f         | popl   %ebp
+  0x0d9: a0           | ret
+                      | 

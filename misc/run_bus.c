@@ -11,8 +11,12 @@ int main() {
 	my_id = 137;
 	bus_ptr = get_shared_memory_phy(BUS_PATH, BUS_SIZE);
 	shared_ptr = get_shared_memory_phy(SHARED_MEMORY_PATH, SHARED_MEMORY_SIZE);
-
+	byte_t*shared = get_shared_memory();
 	int*bus = (int*) get_bus();
+
+	//Init the shared
+	memset(shared, 0, SHARED_MEMORY_SIZE);
+
 	init_bus(bus);
 	init_bus_lock();
 	puts("Waiting for 2 clients");
@@ -43,5 +47,16 @@ int main() {
 	}
 
 	puts("Now, 2 clients are finished!");
+
+	// Now, print any non-zero position in shared.
+
+	int i;
+	for (i = 0; i < SHARED_MEMORY_SIZE; i += 4) {
+		int pos = OWN_MEMORY_SIZE + i;
+		int val = *(int*) (shared + i);
+		if (val != 0) {
+			printf("%0x: %d\n", pos, val);
+		}
+	}
 	return 0;
 }

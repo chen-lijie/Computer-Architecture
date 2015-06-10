@@ -1,0 +1,93 @@
+# 0x1000: shared start
+  .pos 0
+  irmovl 0x1000, %eax
+  irmovl 0x1, %ecx
+
+  rmswap %ecx, (%eax)
+  irmovl 0x9, %esi
+  irmovl 0x1, %edi
+  andl   %ecx, %ecx
+  irmovl 0x1, %edx
+  xorl   %ecx, %edx        # edx = *eax ^ 1
+  rmmovl %edx, 0x10(%eax)
+
+  irmovl stack, %esp       # set up stack
+  irmovl stack, %ebp
+
+loop:
+  pushl  %eax
+  call   lock
+  popl   %eax
+
+  pushl  %eax
+  pushl  %edx
+  pushl  %ecx
+  call   incdata           # lock obtained
+  popl   %ecx
+  popl   %edx
+  popl   %eax
+
+  rmmovl %ecx, 0x10(%eax)    # release lock
+
+  irmovl 0x1, %edi
+  subl   %edi, %esi
+  andl   %esi, %esi
+  jne    loop
+
+end:
+  halt
+
+lock:                      # while (*eax != edx)
+  pushl  %ebp
+  rrmovl %esp, %ebp
+  pushl  %edi
+
+L2:
+  irmovl 0x1010, %eax
+  mrmovl (%eax), %edi
+  xorl   %edx, %edi
+  jne    L2
+
+  popl   %edi
+  rrmovl %ebp, %esp
+  popl   %ebp
+  ret
+
+incdata:
+  pushl  %ebp
+  rrmovl %esp, %ebp
+  pushl  %edi
+  pushl  %esi
+
+  irmovl 0x1040, %eax
+  mrmovl (%eax), %ecx
+  iaddl  0x1, %ecx
+  rmmovl %ecx, (%eax)
+  mrmovl 8(%ebp), %esi
+
+L4:
+  iaddl  0x4, %eax
+  mrmovl (%eax), %edx
+  andl   %esi, %esi        # if pid == 0 : *= 2 else += 1
+  jne    L5
+  iaddl  0x1, %edx
+  jmp    L6
+
+L5:
+  addl   %edx, %edx
+
+L6:
+  rmmovl %edx, (%eax)
+  irmovl 0x1, %edi
+  subl   %edi, %ecx
+  andl   %ecx, %ecx
+  jne    L4
+
+  popl   %esi
+  popl   %edi
+  rrmovl %ebp, %esp
+  popl   %ebp
+  ret
+
+  .pos 0x800
+stack:

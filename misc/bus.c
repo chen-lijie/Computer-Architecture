@@ -23,6 +23,7 @@ void init_bus_lock() {
 	int*bus = (int*) get_bus();
 	init_lock(bus_lock, bus + 8);
 	broadcast_finished = sem_open(BUS_SEM, O_CREAT, 0644, 3);
+	sem_init(broadcast_finished, 1, 0);
 }
 
 void set_bus_lock() {

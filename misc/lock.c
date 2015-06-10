@@ -17,6 +17,7 @@
 
 void init_lock(lock_t lock, int*lock_holder) {
 	lock->mutex = sem_open(lock->name, O_CREAT, 0644, 3);
+	sem_init(lock->mutex, 1, 0);
 	if (lock->mutex == 0) {
 		cerr("Error when initialize lock %s\n", lock->name);
 	}

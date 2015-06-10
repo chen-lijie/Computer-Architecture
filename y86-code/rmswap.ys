@@ -1,7 +1,7 @@
-irmovl $10 %eax
-irmovl $1 %eb
-rmmovl %eax, (eax)
+irmovl $0x111, %ebx
+irmovl $0x320, %eax
+irmovl $0x310, %ecx
+rmmovl %ebx, (%eax)
+rmmovl %eax, (%ecx)
 rmswap %ecx, (%eax)
-addl
-
-
+addl %ecx, %ebx
