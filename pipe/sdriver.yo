@@ -77,10 +77,10 @@
                       | ###############################
   0x090:              | 	.align 4
   0x090:              | src:
-  0x090: ffffffff     | 	.long -1
+  0x090: 01000000     | 	.long 1
   0x094: 02000000     | 	.long 2
   0x098: fdffffff     | 	.long -3
-  0x09c: 04000000     | 	.long 4
+  0x09c: fcffffff     | 	.long -4
   0x0a0: fadebc00     | 	.long 0xbcdefa # This shouldn't get moved
                       | 
   0x0b0:              | 	.align 16

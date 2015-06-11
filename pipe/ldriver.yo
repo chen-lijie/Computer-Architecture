@@ -77,56 +77,56 @@
                       | ###############################
   0x090:              | 	.align 4
   0x090:              | src:
-  0x090: ffffffff     | 	.long -1
-  0x094: feffffff     | 	.long -2
-  0x098: fdffffff     | 	.long -3
-  0x09c: 04000000     | 	.long 4
-  0x0a0: fbffffff     | 	.long -5
+  0x090: 01000000     | 	.long 1
+  0x094: 02000000     | 	.long 2
+  0x098: 03000000     | 	.long 3
+  0x09c: fcffffff     | 	.long -4
+  0x0a0: 05000000     | 	.long 5
   0x0a4: 06000000     | 	.long 6
   0x0a8: 07000000     | 	.long 7
   0x0ac: 08000000     | 	.long 8
   0x0b0: 09000000     | 	.long 9
-  0x0b4: 0a000000     | 	.long 10
-  0x0b8: f5ffffff     | 	.long -11
+  0x0b4: f6ffffff     | 	.long -10
+  0x0b8: 0b000000     | 	.long 11
   0x0bc: f4ffffff     | 	.long -12
-  0x0c0: 0d000000     | 	.long 13
+  0x0c0: f3ffffff     | 	.long -13
   0x0c4: 0e000000     | 	.long 14
   0x0c8: 0f000000     | 	.long 15
-  0x0cc: 10000000     | 	.long 16
+  0x0cc: f0ffffff     | 	.long -16
   0x0d0: efffffff     | 	.long -17
   0x0d4: eeffffff     | 	.long -18
-  0x0d8: 13000000     | 	.long 19
-  0x0dc: 14000000     | 	.long 20
-  0x0e0: ebffffff     | 	.long -21
-  0x0e4: eaffffff     | 	.long -22
+  0x0d8: edffffff     | 	.long -19
+  0x0dc: ecffffff     | 	.long -20
+  0x0e0: 15000000     | 	.long 21
+  0x0e4: 16000000     | 	.long 22
   0x0e8: 17000000     | 	.long 23
-  0x0ec: e8ffffff     | 	.long -24
+  0x0ec: 18000000     | 	.long 24
   0x0f0: 19000000     | 	.long 25
   0x0f4: 1a000000     | 	.long 26
   0x0f8: e5ffffff     | 	.long -27
-  0x0fc: 1c000000     | 	.long 28
+  0x0fc: e4ffffff     | 	.long -28
   0x100: 1d000000     | 	.long 29
   0x104: 1e000000     | 	.long 30
   0x108: 1f000000     | 	.long 31
-  0x10c: 20000000     | 	.long 32
-  0x110: 21000000     | 	.long 33
+  0x10c: e0ffffff     | 	.long -32
+  0x110: dfffffff     | 	.long -33
   0x114: 22000000     | 	.long 34
   0x118: 23000000     | 	.long 35
-  0x11c: dcffffff     | 	.long -36
+  0x11c: 24000000     | 	.long 36
   0x120: 25000000     | 	.long 37
-  0x124: 26000000     | 	.long 38
+  0x124: daffffff     | 	.long -38
   0x128: d9ffffff     | 	.long -39
-  0x12c: d8ffffff     | 	.long -40
+  0x12c: 28000000     | 	.long 40
   0x130: 29000000     | 	.long 41
   0x134: 2a000000     | 	.long 42
-  0x138: d5ffffff     | 	.long -43
-  0x13c: 2c000000     | 	.long 44
-  0x140: 2d000000     | 	.long 45
-  0x144: d2ffffff     | 	.long -46
+  0x138: 2b000000     | 	.long 43
+  0x13c: d4ffffff     | 	.long -44
+  0x140: d3ffffff     | 	.long -45
+  0x144: 2e000000     | 	.long 46
   0x148: d1ffffff     | 	.long -47
-  0x14c: d0ffffff     | 	.long -48
+  0x14c: 30000000     | 	.long 48
   0x150: 31000000     | 	.long 49
-  0x154: 32000000     | 	.long 50
+  0x154: ceffffff     | 	.long -50
   0x158: cdffffff     | 	.long -51
   0x15c: ccffffff     | 	.long -52
   0x160: cbffffff     | 	.long -53

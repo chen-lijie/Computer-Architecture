@@ -39,11 +39,21 @@ int main() {
 
 	puts("Now, 2 clients are ready!");
 
+	int last = shared[16];
+	int counter = 0;
+
 	for (;;) {
 		if (bus[BUS_EXITED] == 3) {
 			break;
 		}
 		usleep(33);
+		int get = shared[16];
+		while (get != last) {
+			fprintf(stderr, "Switch #%d: Lock switch from %d %d\n", counter,
+					last, get);
+			++counter;
+			last = get;
+		}
 	}
 
 	puts("Now, 2 clients are finished!");

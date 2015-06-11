@@ -402,7 +402,7 @@ void broadcast(mem_t mem, int type, int addr) {
 		return;
 	}
 
-	fprintf(stderr, "Boradcast! %d %c %d\n", my_id, (char) type, addr);
+//	fprintf(stderr, "Boradcast! %d %c %d\n", my_id, (char) type, addr);
 
 	//There should be no message left here
 	assert(bus[BUS_TYPE] == 0);
@@ -411,7 +411,7 @@ void broadcast(mem_t mem, int type, int addr) {
 	bus[BUS_TYPE] = type;
 	bus[BUS_ADDR] = addr;
 //waiting on this broadcast to be finished
-	fprintf(stderr, "%d\n", broadcast_finished);
+//	fprintf(stderr, "%d\n", broadcast_finished);
 	sem_wait(broadcast_finished);
 	assert(bus[BUS_TYPE] == 0);
 }
@@ -430,11 +430,11 @@ void response(mem_t mem) {
 		return;
 	}
 
-	fprintf(stderr, "Responsed! %d %c %d\n", id, (char) type, addr);
+//	fprintf(stderr, "Responsed! %d %c %d\n", id, (char) type, addr);
 
 	cache_blk_t blk = find_cache_blk(mem->cache, addr);
 	if (blk == NULL) {
-		fprintf(stderr, "Cleared\n");
+//		fprintf(stderr, "Cleared\n");
 		clear_bus(bus);
 		sem_post(broadcast_finished);
 		assert(bus[BUS_TYPE] == 0);
@@ -451,7 +451,7 @@ void response(mem_t mem) {
 		blk->valid = FALSE;
 	}
 
-	fprintf(stderr, "Cleared\n");
+//	fprintf(stderr, "Cleared\n");
 	clear_bus(bus);
 	sem_post(broadcast_finished);
 	assert(bus[BUS_TYPE] == 0);

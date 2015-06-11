@@ -23,7 +23,7 @@ irmovl 0x1, %ebx
 rmswap %ebx, (%eax)
 irmovl 0x1, %ecx
 xorl %ebx, %ecx # %ecx = %ebx ^ 1
-irmovl 10, %esi
+irmovl 100, %esi
 
 irmovl 0x800, %esp       # set up stack
 irmovl 0x800, %ebp

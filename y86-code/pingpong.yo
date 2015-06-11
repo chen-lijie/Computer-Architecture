@@ -23,7 +23,7 @@
   0x00c: 603000000000 | rmswap %ebx, (%eax)
   0x012: 30f101000000 | irmovl 0x1, %ecx
   0x018: 7331         | xorl %ebx, %ecx # %ecx = %ebx ^ 1
-  0x01a: 30f60a000000 | irmovl 10, %esi
+  0x01a: 30f664000000 | irmovl 100, %esi
                       | 
   0x020: 30f400080000 | irmovl 0x800, %esp       # set up stack
   0x026: 30f500080000 | irmovl 0x800, %ebp
